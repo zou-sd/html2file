@@ -10,6 +10,8 @@ import my.html2file.html2pdf.service.Html2PdfService;
 import my.html2file.html2word.service.Html2WordService;
 import my.html2file.utils.BaseUtils;
 import my.html2file.utils.PathUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class MainController {
+    protected static final Logger logger = LoggerFactory.getLogger(MainController.class);
+
     @Autowired
     private Html2ImageService html2ImageService;
     @Autowired
@@ -43,12 +47,13 @@ public class MainController {
      * @return
      */
     @RequestMapping("/html2image")
-    public String html2image(@RequestParam(name = "pageUrl") String pageUrl, @RequestParam(name = "fileExt", defaultValue = "") String fileExt) {
+    public String html2image(@RequestParam(name = "pageUrl") String pageUrl, @RequestParam(name = "fileExt",
+            defaultValue = "") String fileExt) {
         try {
             String fileRelativePath = html2ImageService.excute(pageUrl, fileExt);
             return "redirect:" + fileRelativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             return "/error";
         }
     }
@@ -65,10 +70,11 @@ public class MainController {
             String fileRelativePath = html2PdfService.excute(pageUrl);
             return "redirect:" + fileRelativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             return "/error";
         }
     }
+
     /**
      * html页面转markdown
      *
@@ -81,10 +87,11 @@ public class MainController {
             String fileRelativePath = html2MarkdownService.excute(pageUrl);
             return "redirect:" + fileRelativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             return "/error";
         }
     }
+
     /**
      * html页面转excel
      *
@@ -97,10 +104,11 @@ public class MainController {
             String fileRelativePath = html2ExcelService.excute(pageUrl);
             return "redirect:" + fileRelativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             return "/error";
         }
     }
+
     /**
      * html页面转word
      *
@@ -113,7 +121,7 @@ public class MainController {
             String fileRelativePath = html2WordService.excute(pageUrl);
             return "redirect:" + fileRelativePath;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             return "/error";
         }
     }
@@ -129,30 +137,30 @@ public class MainController {
     MyAjaxResult html2file(@RequestBody MyAjaxPost myAjaxPost) {
         MyAjaxResult result = new MyAjaxResult();
         try {
-            if(BaseUtils.isBlank(myAjaxPost.getPageUrl()) && !BaseUtils.isBlank(myAjaxPost.getPageHtmlContent())){
-                //如果只传入了html内容，未传入页面链接（pageUrl），将HTML内容保存为本应用的HTML文档，并且获得http链接地址赋给
+            if (BaseUtils.isBlank(myAjaxPost.getPageUrl()) && !BaseUtils.isBlank(myAjaxPost.getPageHtmlContent())) {
+                // 如果只传入了html内容，未传入页面链接（pageUrl），将HTML内容保存为本应用的HTML文档，并且获得http链接地址赋给
                 String tempHtmlPath = html2HtmlService.excute(myAjaxPost.getPageHtmlContent());
                 String newPageUrl = PathUtils.getPathBaseClass(tempHtmlPath);
                 myAjaxPost.setPageUrl(newPageUrl);
             }
-            String fileRelativePath = null;
+            String fileRelativePath;
             if (MyAjaxPost.TO_IMG.equals(myAjaxPost.getFileType())) {
                 fileRelativePath = html2ImageService.excute(myAjaxPost.getPageUrl(), myAjaxPost.getFileExt());
             } else if (MyAjaxPost.TO_PDF.equals(myAjaxPost.getFileType())) {
                 fileRelativePath = html2PdfService.excute(myAjaxPost.getPageUrl());
-            }else if (MyAjaxPost.TO_MD.equals(myAjaxPost.getFileType())) {
+            } else if (MyAjaxPost.TO_MD.equals(myAjaxPost.getFileType())) {
                 fileRelativePath = html2MarkdownService.excute(myAjaxPost.getPageUrl());
-            }else if (MyAjaxPost.TO_EXCEL.equals(myAjaxPost.getFileType())) {
+            } else if (MyAjaxPost.TO_EXCEL.equals(myAjaxPost.getFileType())) {
                 fileRelativePath = html2ExcelService.excute(myAjaxPost.getPageUrl());
-            }else if(MyAjaxPost.TO_WORD.equals(myAjaxPost.getFileType())) {
+            } else if (MyAjaxPost.TO_WORD.equals(myAjaxPost.getFileType())) {
                 fileRelativePath = html2WordService.excute(myAjaxPost.getPageUrl());
-            }else {
+            } else {
                 result.setStatus(MyAjaxResult.FAIL);
                 fileRelativePath = "暂时不支持该类型文档转化！";
             }
             result.setResult(fileRelativePath);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
             result.setStatus(MyAjaxResult.FAIL);
             result.setErrorMsg("解析失败！{" + e.getMessage() + "}");
         }

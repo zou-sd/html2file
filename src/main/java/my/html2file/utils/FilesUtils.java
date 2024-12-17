@@ -1,21 +1,11 @@
 package my.html2file.utils;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
+import java.util.*;
 
 /**
  * FilesUtil
@@ -24,6 +14,7 @@ import java.util.StringTokenizer;
  * @author refactor by Sevan Joe
  */
 public class FilesUtils {
+    protected static final Logger logger = LoggerFactory.getLogger(FilesUtils.class);
 
     /**
      * read text file content, return string split by "\n"
@@ -44,12 +35,12 @@ public class FilesUtils {
      */
     public static String readAll(String filePathAndName, String encoding) {
         String string = "";
-        StringBuilder stringBuilder = new StringBuilder("");
+        StringBuilder stringBuilder = new StringBuilder();
         FileInputStream fileInputStream = null;
         try {
             fileInputStream = new FileInputStream(URLDecoder.decode(filePathAndName, encoding));
             InputStreamReader inputStreamReader;
-            if ("".equals(encoding)) {
+            if (encoding.isEmpty()) {
                 inputStreamReader = new InputStreamReader(fileInputStream);
             } else {
                 inputStreamReader = new InputStreamReader(fileInputStream, encoding);
@@ -70,7 +61,7 @@ public class FilesUtils {
             try {
                 if (fileInputStream != null) fileInputStream.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
         return string;
@@ -85,13 +76,13 @@ public class FilesUtils {
      */
     public static String readLine(String filePathAndName, long lineIndex, String encoding) {
         String string = "";
-        StringBuilder stringBuilder = new StringBuilder("");
+        StringBuilder stringBuilder = new StringBuilder();
         long i = 0;
         FileInputStream fileInputStream = null;
         try {
             fileInputStream = new FileInputStream(URLDecoder.decode(filePathAndName, encoding));
             InputStreamReader inputStreamReader;
-            if ("".equals(encoding)) {
+            if (encoding.isEmpty()) {
                 inputStreamReader = new InputStreamReader(fileInputStream);
             } else {
                 inputStreamReader = new InputStreamReader(fileInputStream, encoding);
@@ -117,7 +108,7 @@ public class FilesUtils {
             try {
                 if (fileInputStream != null) fileInputStream.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
         return string;
@@ -174,8 +165,7 @@ public class FilesUtils {
             fileWriter.close();
             return true;
         } catch (Exception e) {
-            System.out.println("create file failed");
-            e.printStackTrace();
+            logger.error("create file failed", e);
         }
         return false;
     }
@@ -199,8 +189,7 @@ public class FilesUtils {
             printWriter.close();
             return true;
         } catch (Exception e) {
-            System.out.println("create file failed");
-            e.printStackTrace();
+            logger.error("create file failed", e);
         }
         return false;
     }
@@ -215,8 +204,7 @@ public class FilesUtils {
             File file = new File(filePathAndName);
             return file.delete();
         } catch (Exception e) {
-            System.out.println("delete file failed");
-            e.printStackTrace();
+            logger.error("delete file failed", e);
             return false;
         }
     }
@@ -235,9 +223,8 @@ public class FilesUtils {
                 myFilePath.mkdirs();
             }
         } catch (Exception e) {
-            System.out.println("create folder failed");
+            logger.error("create folder failed", e);
             filePath = "";
-            e.printStackTrace();
         }
         return filePath;
     }
@@ -253,8 +240,7 @@ public class FilesUtils {
             File file = new File(folderPath);
             file.delete(); // delete the empty folder
         } catch (Exception e) {
-            System.out.println("delete folder failed");
-            e.printStackTrace();
+            logger.error("delete folder failed", e);
         }
     }
 
@@ -283,7 +269,8 @@ public class FilesUtils {
         }
         if (file.getAbsolutePath().equalsIgnoreCase("/usr") || file.getAbsolutePath().equalsIgnoreCase("/opt")
                 || file.getAbsolutePath().equalsIgnoreCase("/bin") || file.getAbsolutePath().equalsIgnoreCase("/sbin")
-                || file.getAbsolutePath().equalsIgnoreCase("/etc") || file.getAbsolutePath().equalsIgnoreCase("/selinux")
+                || file.getAbsolutePath().equalsIgnoreCase("/etc") || file.getAbsolutePath().equalsIgnoreCase(
+                "/selinux")
                 || file.getAbsolutePath().equalsIgnoreCase("/sys") || file.getAbsolutePath().equalsIgnoreCase("/var")
                 || file.getAbsolutePath().equalsIgnoreCase("/home") || file.getAbsolutePath().equalsIgnoreCase("/net")) {
             System.out.println("this is a root directory, you cannot delete all files in it!");
@@ -338,8 +325,7 @@ public class FilesUtils {
                 }
             }
         } catch (Exception e) {
-            System.out.println("copy file failed");
-            e.printStackTrace();
+            logger.error("copy file failed", e);
         } finally {
             try {
                 if (fileOutputStream != null)
@@ -347,7 +333,7 @@ public class FilesUtils {
                 if (inputStream != null)
                     inputStream.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
     }
@@ -389,8 +375,7 @@ public class FilesUtils {
                 }
             }
         } catch (Exception e) {
-            System.out.println("copy folder failed");
-            e.printStackTrace();
+            logger.error("copy folder failed", e);
         }
     }
 
@@ -429,7 +414,7 @@ public class FilesUtils {
             String path;
             pathString = folderPath;
             StringTokenizer stringTokenizer = new StringTokenizer(paths, "|");
-            for (; stringTokenizer.hasMoreTokens(); ) {
+            while (stringTokenizer.hasMoreTokens()) {
                 path = stringTokenizer.nextToken();
                 if (pathString.lastIndexOf("/") != -1) {
                     pathString = newFolder(pathString + path);
@@ -438,27 +423,27 @@ public class FilesUtils {
                 }
             }
         } catch (Exception e) {
-            System.out.println("create multi-level directory failed");
+            logger.error("create multi-level directory failed", e);
             pathString = "";
-            e.printStackTrace();
         }
         return pathString;
     }
 
     /**
      * 检查文件夹并创建
+     *
      * @param absoultOutputFilePath
      * @return
      */
-    public static boolean checkFolderAndCreate(String absoultOutputFilePath){
+    public static boolean checkFolderAndCreate(String absoultOutputFilePath) {
         int index = absoultOutputFilePath.lastIndexOf("/");
-        if(index > 0) {
-            String dirPath = absoultOutputFilePath.substring(0,index);
+        if (index > 0) {
+            String dirPath = absoultOutputFilePath.substring(0, index);
             File file = new File(dirPath);
             int i = 0;
             while (!file.exists()) {
                 file.mkdirs();
-                if(i++ > 100){
+                if (i++ > 100) {
                     return false;
                 }
             }
@@ -480,9 +465,8 @@ public class FilesUtils {
                 file.mkdirs();
             }
         } catch (Exception e) {
-            System.out.println("create multi-level directory failed");
+            logger.error("create multi-level directory failed", e);
             pathString = "";
-            e.printStackTrace();
         }
         return pathString;
     }
@@ -504,7 +488,7 @@ public class FilesUtils {
      * @return List<File>
      */
     public static List<File> getAllFiles(String path) {
-        List<File> fileList = new ArrayList<File>();
+        List<File> fileList = new ArrayList<>();
         File file = new File(path);
         if (!file.exists()) {
             return fileList;
@@ -539,7 +523,7 @@ public class FilesUtils {
      * @return List<File>
      */
     public static List<File> getAllFiles(String path, String suffix) {
-        List<File> fileList = new ArrayList<File>();
+        List<File> fileList = new ArrayList<>();
         File file = new File(path);
         if (!file.exists()) {
             return fileList;
@@ -556,16 +540,16 @@ public class FilesUtils {
                 tempFile = new File(path + File.separator + fileName);
             }
             if (tempFile.isFile()) {
-                if (suffix == null || "".equals(suffix))
+                if (suffix == null || suffix.isEmpty())
                     fileList.add(tempFile);
                 else {
                     String filePath = tempFile.getAbsolutePath();
-                    if (!suffix.equals("")) {
+                    if (!suffix.isEmpty()) {
                         int beginIndex = filePath.lastIndexOf("."); // the last '.' index before suffix
                         String tempSuffix;
 
                         if (beginIndex != -1) {
-                            tempSuffix = filePath.substring(beginIndex + 1, filePath.length());
+                            tempSuffix = filePath.substring(beginIndex + 1);
                             if (tempSuffix.equals(suffix)) {
                                 fileList.add(tempFile);
                             }
@@ -590,7 +574,7 @@ public class FilesUtils {
      * @return List<String>
      */
     public static List<String> getAllFileNames(String path, String suffix, boolean isDepth) {
-        List<String> fileNamesList = new ArrayList<String>();
+        List<String> fileNamesList = new ArrayList<>();
         File file = new File(path);
         return listFileName(fileNamesList, file, suffix, isDepth);
     }
@@ -609,12 +593,12 @@ public class FilesUtils {
             }
         } else {
             String filePath = file.getAbsolutePath();
-            if (!suffix.equals("")) {
+            if (!suffix.isEmpty()) {
                 int begIndex = filePath.lastIndexOf("."); // the last '.' index before suffix
                 String tempSuffix;
 
                 if (begIndex != -1) {
-                    tempSuffix = filePath.substring(begIndex + 1, filePath.length());
+                    tempSuffix = filePath.substring(begIndex + 1);
                     if (tempSuffix.equals(suffix)) {
                         fileNamesList.add(filePath);
                     }
@@ -633,7 +617,7 @@ public class FilesUtils {
      * @return List<String>
      */
     public static List<String> getAllFileNames(String path) {
-        List<String> fileNamesList = new ArrayList<String>();
+        List<String> fileNamesList = new ArrayList<>();
         File file = new File(path);
         if (!file.exists()) {
             return fileNamesList;
@@ -663,7 +647,7 @@ public class FilesUtils {
      * @return Map<String, String>
      */
     public static Map<String, String> getAllFileNamesByMap(String path) {
-        Map<String, String> fileNamesMap = new HashMap<String, String>();
+        Map<String, String> fileNamesMap = new HashMap<>();
         File file = new File(path);
         if (!file.exists()) {
             return fileNamesMap;
@@ -701,7 +685,7 @@ public class FilesUtils {
             return null;
         }
         String[] tempList = file.list();
-        List<String> fileList = new ArrayList<String>();
+        List<String> fileList = new ArrayList<>();
         File tempFile;
         for (String fileName : tempList) {
             if (path.endsWith(File.separator)) {
@@ -739,7 +723,7 @@ public class FilesUtils {
         String shortFileName = fileName;
         shortFileName = shortFileName.replace("\\", "/");
         if (shortFileName.contains("/"))
-            shortFileName = shortFileName.substring(shortFileName.lastIndexOf("/") + 1, shortFileName.length());
+            shortFileName = shortFileName.substring(shortFileName.lastIndexOf("/") + 1);
         return shortFileName;
     }
 
@@ -805,8 +789,7 @@ public class FilesUtils {
             }
             isSucceed = true;
         } catch (Exception e) {
-            System.out.println("copy file failed");
-            e.printStackTrace();
+            logger.error("copy file failed", e);
         } finally {
             try {
                 if (fileOutputStream != null)
@@ -853,8 +836,7 @@ public class FilesUtils {
             }
             isSucceed = true;
         } catch (Exception e) {
-            System.out.println("move file failed");
-            e.printStackTrace();
+            logger.error("move file failed", e);
         } finally {
             try {
                 if (fileOutputStream != null)
@@ -873,16 +855,16 @@ public class FilesUtils {
 
     /**
      * 关闭 对象管道
+     *
      * @param closeable
      */
     public static void closeQuietly(Closeable closeable) {
         try {
-            if(closeable != null) {
+            if (closeable != null) {
                 closeable.close();
             }
         } catch (IOException var2) {
-            ;
+            logger.error(var2.toString(), var2);
         }
-
     }
 }
