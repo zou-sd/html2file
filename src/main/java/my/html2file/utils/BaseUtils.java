@@ -14,38 +14,41 @@ import java.util.UUID;
 public class BaseUtils {
     /**
      * 字符串是否为空
+     *
      * @param str
      * @return
      */
-    public static boolean isBlank(String str){
+    public static boolean isBlank(String str) {
         int strLen;
         if (str == null || (strLen = str.length()) == 0) {
             return true;
         }
         for (int i = 0; i < strLen; i++) {
-            if ((Character.isWhitespace(str.charAt(i)) == false)) {
+            if (!Character.isWhitespace(str.charAt(i))) {
                 return false;
             }
         }
         return true;
     }
+
     /**
      * 字符串是否为空
+     *
      * @param str
      * @return
      */
-    public static boolean isNotBlank(String str){
+    public static boolean isNotBlank(String str) {
         return !isBlank(str);
     }
 
     public static boolean isNumeric(String cs) {
-        if(isBlank(cs)) {
+        if (isBlank(cs)) {
             return false;
         } else {
             int sz = cs.length();
 
-            for(int i = 0; i < sz; ++i) {
-                if(!Character.isDigit(cs.charAt(i))) {
+            for (int i = 0; i < sz; ++i) {
+                if (!Character.isDigit(cs.charAt(i))) {
                     return false;
                 }
             }
@@ -53,6 +56,7 @@ public class BaseUtils {
             return true;
         }
     }
+
     /**
      * 封装JDK自带的UUID, 通过Random数字生成, 中间有-分割.
      *
@@ -80,8 +84,7 @@ public class BaseUtils {
     public static String getDateStr(String sformat) {
         Date currentTime = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat(sformat);
-        String dateString = formatter.format(currentTime);
-        return dateString;
+        return formatter.format(currentTime);
     }
 
     public static String trimToEmpty(String str) {
@@ -90,6 +93,7 @@ public class BaseUtils {
 
     /**
      * 是否包含
+     *
      * @param array
      * @param objectToFind
      * @return

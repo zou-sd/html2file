@@ -1,5 +1,7 @@
 package my.html2file.utils;
 
+import java.net.URL;
+
 /**
  * 路径获取工具
  *
@@ -14,10 +16,13 @@ public class PathUtils {
      * @return
      */
     public static String getClassRootPath(String path) {
+        URL resource = PathUtils.class.getResource("/");
+        if (resource == null) {
+            throw new RuntimeException("非法路径：" + path);
+        }
+        String filePath = resource.getPath();
         path = PathUtils.trimToEmpty(path);
-        String filePath = PathUtils.class.getResource("/").getPath().toString();
-        if (filePath == null) return null;
-        String p = "";
+        String p;
         if (path.startsWith("/")) {
             p = filePath + path.substring(1);
         } else {
@@ -28,13 +33,14 @@ public class PathUtils {
 
     /**
      * 获取参照class路径，获取原生路径
+     *
      * @param path
      * @return
      */
-    public static String getPathBaseClass(String path){
+    public static String getPathBaseClass(String path) {
         path = PathUtils.trimToEmpty(path);
-        String filePath = PathUtils.class.getResource(path).getPath().toString();
-        if(OsInfo.isWindows()){
+        String filePath = PathUtils.class.getResource(path).getPath();
+        if (OsInfo.isWindows()) {
             return getWindowsRightPath(filePath);
         }
         return filePath;
@@ -42,13 +48,18 @@ public class PathUtils {
 
     /**
      * 获取window下的正确路径
+     *
      * @param path
      * @return
      */
-    public static String getWindowsRightPath(String path){
-        path = path.replace("/","\\");
-        if(path.startsWith("\\")){ path = path.substring(1);}
-        while (path.indexOf("\\\\") >= 0){ path = path.replace("\\\\","\\");}
+    public static String getWindowsRightPath(String path) {
+        path = path.replace("/", "\\");
+        if (path.startsWith("\\")) {
+            path = path.substring(1);
+        }
+        while (path.contains("\\\\")) {
+            path = path.replace("\\\\", "\\");
+        }
         return path;
     }
 
