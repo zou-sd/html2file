@@ -3,15 +3,11 @@ package my.html2file.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 文件下载相关工具类
@@ -30,7 +26,7 @@ public class DownloadUtils {
      * @param savePath
      * @throws IOException
      */
-    public static void downLoadFromUrl(String urlStr, String fileName, String savePath) {
+    public static void downLoadFromUrl(String urlStr, String fileName, String savePath) throws IOException {
         downLoadFromUrl(urlStr, fileName, savePath, 3000);
     }
 
@@ -42,127 +38,123 @@ public class DownloadUtils {
      * @param savePath
      * @throws IOException
      */
-    public static void downLoadFromUrl(String urlStr, String fileName, String savePath, int timeout) {
-        //得到输入流
-        InputStream inputStream = getInputStreamFromUrl(urlStr, timeout);
-        //获取自己数组
-        byte[] getData = new byte[0];
-        try {
-            getData = readInputStream(inputStream);
-        } catch (IOException e) {
-            logger.error("读取异常！", e);
-            e.printStackTrace();
+    public static void downLoadFromUrl(String urlStr, String fileName, String savePath, int timeout) throws IOException {
+        String data = getContentFromUrl(urlStr, timeout);
+        if (data == null) {
+            logger.error("文件下载失败！");
+            return;
         }
-
-        //文件保存位置
+        // 文件保存位置
         File saveDir = new File(savePath);
         if (!saveDir.exists()) {
-            while (!saveDir.mkdir() && !saveDir.mkdirs()) ;
+            boolean success;
+            do {
+                success = saveDir.mkdirs();
+            } while (!success);
         }
         File file = new File(saveDir + File.separator + fileName);
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
-            fos.write(getData);
-        } catch (Exception e) {
-            logger.error("文件不存在！", e);
-        } finally {
-            FilesUtils.closeQuietly(fos);
-            FilesUtils.closeQuietly(inputStream);
+        try (FileWriter fileWriter = new FileWriter(file);
+             BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write(data);
         }
         logger.info("[" + urlStr + "] 下载成功！");
     }
 
     /**
-     * 从网络Url中下载文件
+     * 从网络Url读取内容
      *
      * @param urlStr
      * @throws IOException
      */
-    public static String getContentFromUrl(String urlStr) {
+    public static String getContentFromUrl(String urlStr) throws IOException {
         return getContentFromUrl(urlStr, 3000);
     }
 
     /**
-     * 从网络Url中下载文件
+     * 从网络Url读取内容
      *
      * @param urlStr
-     * @throws IOException
+     * @return
      */
-    public static String getContentFromUrl(String urlStr, int timeout) {
-        //得到输入流
-        InputStream inputStream = getInputStreamFromUrl(urlStr, timeout);
-        //获取自己数组
-        byte[] bytes = new byte[0];
-        try {
-            bytes = readInputStream(inputStream);
-        } catch (IOException e) {
-            logger.error("读取异常！", e);
-            e.printStackTrace();
-        }
-        if (bytes == null) {
-            return "";
-        }
-        //String data = Base64.getEncoder().encodeToString(getData);
-        String data = null;
-        try {
-            data = new String(bytes, "utf-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+    public static String getContentFromUrl(String urlStr, int timeout) throws IOException {
+        logger.info("开始读取：{}", urlStr);
+        HttpURLConnection conn = getHttpURLConnection(urlStr, timeout);
+        if (conn == null) {
             return null;
         }
-        logger.info("[" + urlStr + "] 读取成功！");
+        // 获取响应状态码
+        int statusCode = conn.getResponseCode();
+        // 如果返回值正常，数据在网络中是以流的形式得到服务端返回的数据
+        String data = "";
+        if (statusCode == 200) { // 正常响应
+            // 从流中读取响应信息
+            byte[] bytes = null;
+            // 得到输入流
+            try (InputStream inputStream = conn.getInputStream()) {
+                // 获取字节数组
+                bytes = readInputStream(inputStream);
+            } catch (IOException e) {
+                logger.error("读取异常！", e);
+            }
+            if (bytes == null || bytes.length == 0) {
+                data = "";
+            } else {
+                data = new String(bytes, StandardCharsets.UTF_8);
+            }
+            logger.info("[{}] 读取成功！", urlStr);
+        } else if (statusCode >= 300 && statusCode < 400) { // 状态码为重定向时，获取重定向目标的URL
+            String redirectUrl = conn.getHeaderField("Location");
+            if (redirectUrl != null) {
+                logger.info("原始请求地址：{}，请求重定向地址：{}", conn.getURL().toString(), redirectUrl);
+                data = getContentFromUrl(redirectUrl, 3000);
+            }
+        } else {
+            logger.error("请求失败：url:{} status:{}", conn.getURL().toString(), statusCode);
+        }
+        // 断开连接，释放资源
+        conn.disconnect();
         return data;
     }
 
-    /**
-     * 传根据文件地址获取文件流
-     *
-     * @param urlStr
-     * @return
-     */
-    public static InputStream getInputStreaFromUrl(String urlStr) {
-        return getInputStreamFromUrl(urlStr, 3000);
-    }
-
-    /**
-     * 传根据文件地址获取文件流
-     *
-     * @param urlStr
-     * @return
-     */
-    public static InputStream getInputStreamFromUrl(String urlStr, int timeout) {
-        logger.info("下载文件：{}", urlStr);
-        URL url = null;
+    private static HttpURLConnection getHttpURLConnection(String siteUrl, int timeout) {
+        URL url;
         try {
-            url = new URL(urlStr);
+            url = new URL(siteUrl);
         } catch (MalformedURLException e) {
             logger.error("地址无效！", e);
-            e.printStackTrace();
             return null;
         }
-        HttpURLConnection conn = null;
+        HttpURLConnection conn;
         try {
             conn = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
-            logger.error("连接异常！", e);
-            e.printStackTrace();
+            logger.error("打开连接异常！", e);
             return null;
         }
-        //设置超时间为3秒
-        conn.setConnectTimeout(timeout);
-        //防止屏蔽程序抓取而返回403错误
-        conn.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
 
-        //得到输入流
-        InputStream inputStream = null;
+        // 设置超时间为3秒
+        conn.setConnectTimeout(timeout);
+        // 设置请求头中的 User-Agent，防止屏蔽程序抓取而返回403错误
+        conn.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT; DigExt)");
+        // 设置超时时间
+        conn.setConnectTimeout(timeout);
+        // 设置是否使用缓存
+        // connection.setUseCaches(true);
+        // 设置此 HttpURLConnection 实例是否应该自动执行 HTTP 重定向，默认为true
+        conn.setInstanceFollowRedirects(false);
+        // 设置是否从HttpUrlConnection读入
+        // connection.setDoInput(true);
+        // 设置是否向HttpURLConnection输出
+        // connection.setDoOutput(false);
+
+        // 连接
         try {
-            inputStream = conn.getInputStream();
+            conn.connect();
         } catch (IOException e) {
-            logger.error("网络异常！", e);
-            e.printStackTrace();
+            logger.error("连接异常！", e);
+            return null;
         }
-        return inputStream;
+        return conn;
     }
 
     /**
@@ -177,12 +169,12 @@ public class DownloadUtils {
             return null;
         }
         byte[] buffer = new byte[1024];
-        int len = 0;
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        while ((len = inputStream.read(buffer)) != -1) {
-            bos.write(buffer, 0, len);
+        int len;
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            while ((len = inputStream.read(buffer)) != -1) {
+                bos.write(buffer, 0, len);
+            }
+            return bos.toByteArray();
         }
-        bos.close();
-        return bos.toByteArray();
     }
 }
